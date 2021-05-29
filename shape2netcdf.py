@@ -5,7 +5,6 @@ import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import date
-# import warnings; warnings.filterwarnings(action='ignore')
 
 date_created = date.today()
 
