@@ -15,14 +15,20 @@ def BC_QM(var,scen,GCM):
 
     ref = ds_ref.sel(time=slice('1981','2010'))[var]
     hist = ds_sim.sel(time=slice('1981','2010'))[var]
-    sim = ds_sim.sel(time=slice('1981','2010'))[var]
+    if period == 'Reference':
+        sim = ds_sim.sel(time=slice('1981','2010'))[var]
+    elif period == 'Historical':
+        sim = ds_sim.sel(time=slice('1985','2014'))[var]
+    elif period == 'Future':
+        sim = ds_sim.sel(time=slice('2071','2100'))[var]
 
     n_quant = len(hist.values)
     QM = sdba.EmpiricalQuantileMapping.train(ref, hist, nquantiles=n_quant,
                                              group='time', kind=cor_method)
+
     scen = QM.adjust(sim, extrapolation='constant', interp='nearest')
 
     ds_scen = scen.transpose('time','lat','lon').to_dataset()
     ds_scen.to_netcdf('test_ref.nc')
 
-BC_QM('pr','ssp245','ACCESS-CM2')
+BC_QM('pr','ssp245','ACCESS-CM2','Reference')
