@@ -52,9 +52,9 @@ def BC_QM(var,scen,GCM):
 
 
     ### Apply correction
-    scen = QM.adjust(sim, extrapolation='constant', interp='nearest')
-    ds_scen = scen.transpose('time','lat','lon').to_dataset(name=var)
-    ds_scen.to_netcdf(var+'_'+scen+'/'+GCM+'_QM/'+var+'_Amon_'+GCM+'_'+GCM+
-                      '_r1i1p1f1_gn_'+suffix)
+    sim_BC = QM.adjust(sim, extrapolation='constant', interp='nearest')
+    ds_sim_BC = sim_BC.transpose('time','lat','lon').to_dataset(name=var)
+    ds_sim_BC.to_netcdf(var+'_'+scen+'/'+GCM+'_QM/'+var+'_Amon_'+GCM+'_'+scen+
+                        '_r1i1p1f1_gn_'+suffix)
 
 BC_QM(args.var,args.scen,args.GCM,args.period)
