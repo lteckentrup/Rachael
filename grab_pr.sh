@@ -58,6 +58,17 @@ cdo -L -b F64 -remapycon,grid.txt -chunit,'kg m-2 s-1','kg m-2' -mulc,86400 \
        ${pathwayCMIP}/CMIP/${inst}/${model}/${pathwayHistorical}/gn/${version}/* \
        ${pathwayCMIP}/ScenarioMIP/${inst}/${model}/${pathwayScenario}/gn/${version}/*_20* \
        ${var}_${scenario}/${model}/${var}_Amon_${model}_${suffixScenario}
+     
+inst='CAS'
+model='CAS-ESM2-0'
+echo ${model}
+
+cdo -L -b F64 -remapycon,grid.txt -chunit,'kg m-2 s-1','kg m-2' -mulc,86400 \
+       -setcalendar,proleptic_gregorian -muldpm -sellonlatbox,-180,180,-90,90 \
+       -mergetime  \
+       ${pathwayCMIP}/CMIP/${inst}/${model}/${pathwayHistorical}/gn/*/* \
+       ${pathwayCMIP}/ScenarioMIP/${inst}/${model}/${pathwayScenario}/gn/*/*_20* \
+       ${var}_${scenario}/${model}/${var}_Amon_${model}_${suffixScenario}
 
 inst='THU'
 model='CIESM'
