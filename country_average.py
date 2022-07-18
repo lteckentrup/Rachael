@@ -43,5 +43,8 @@ def write_to_csv(var,stats,scen,period):
 
     df.to_csv(var+'_'+stats+'_'+scen+'_'+period+'.csv',index=False)
 
+df['Ens_mean'] = df.drop(columns=['Index', 'ctryCode', 'ctryName']).mean(axis=1)
+df['Ens_std'] = df.drop(columns=['Index', 'ctryCode', 'ctryName', 'Ens_mean']).std(axis=1)
+
 ### Call function
 write_to_csv('pr','COV','ssp245','')
