@@ -2,38 +2,27 @@
 Compare https://xclim.readthedocs.io/en/stable/notebooks/sdba.html
 '''
 
-import xarray as xr
-from xclim import sdba
+def BC_QM(var,scen,GCM):
+    if var == 'pr':
+        fname='REGEN/REGEN_LongTermStns_V1_1981-2010.nc'
+        ds_ref = xr.open_dataset(fname)
+        cor_method='*'
+    elif var == 'tmax':
+        cor_method='+'
 
-### Keep units
-xr.set_options(keep_attrs=True)
+    ds_sim = xr.open_dataset(var+'_'+scen+'/'+GCM+'/'+var+'_Amon_'+GCM+'_'+scen+
+                             '_r1i1p1f1_gn_18500101-21001231.nc')
 
-### Read in reference dataset
-ds_ref = xr.open_dataset('../REGEN/REGEN_LongTermStns_V1_1981-2010.nc')
+    ref = ds_ref.sel(time=slice('1981','2010'))[var]
+    hist = ds_sim.sel(time=slice('1981','2010'))[var]
+    sim = ds_sim.sel(time=slice('1981','2010'))[var]
 
-def BC(GCM,scen):
-  ### Read in simulation
-  ds_sim = xr.open_dataset('pr_Amon_'+GCM+'_'+scen+'_r1i1p1f1_gn_18500101-21001231.nc')
+    n_quant = len(hist.values)
+    QM = sdba.EmpiricalQuantileMapping.train(ref, hist, nquantiles=n_quant,
+                                             group='time', kind=cor_method)
+    scen = QM.adjust(sim, extrapolation='constant', interp='nearest')
 
-  ### Select reference time period 
-  ref = ds_ref.sel(time=slice('1981','2010')).pr/12 ### check unit in ref dataset
-  hist = ds_sim.sel(time=slice('1981','2010')).pr
+    ds_scen = scen.transpose('time','lat','lon').to_dataset()
+    ds_scen.to_netcdf('test_ref.nc')
 
-  sim = ds_sim.pr
-
-  ### Define number of quantiles: Length of reference time period
-  n_quant = len(hist.values)
-
-  ### Calculate quantile mapping bias correction
-  QM = sdba.EmpiricalQuantileMapping.train(ref, hist, nquantiles=n_quant, 
-                                           group='time.month', kind='*')
-  scen = QM.adjust(sim, extrapolation='constant', interp='nearest')
-
-  ### Convert corrected array to dataset and reorder dimensions
-  ds_scen = scen.transpose('time','lat','lon').to_dataset()
-
-  ### Write corrected simulation to netCDF
-  ds_scen.to_netcdf('pr_Amon_'+GCM+'_'+scen+'_r1i1p1f1_gn_18500101-21001231_QM.nc')
-  
-BC('ACCESS-CM2','ssp245')
-
+BC_QM('pr','ssp245','ACCESS-CM2')
