@@ -1,3 +1,7 @@
+'''
+Compare https://xclim.readthedocs.io/en/stable/notebooks/sdba.html
+'''
+
 import xarray as xr
 from xclim import sdba
 
