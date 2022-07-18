@@ -10,8 +10,8 @@ ds_ref = xr.open_dataset('../REGEN/REGEN_LongTermStns_V1_1981-2010.nc')
 ### Read in simulation
 ds_sim = xr.open_dataset('pr_Amon_ACCESS-CM2_ssp245_r1i1p1f1_gn_18500101-21001231.nc')
 
-### Select reference time period
-ref = ds_ref.sel(time=slice('1981','2010')).pr/12
+### Select reference time period 
+ref = ds_ref.sel(time=slice('1981','2010')).pr/12 ### check unit in ref dataset
 hist = ds_sim.sel(time=slice('1981','2010')).pr
 
 sim = ds_sim.pr
