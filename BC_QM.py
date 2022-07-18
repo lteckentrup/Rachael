@@ -21,6 +21,7 @@ def BC_QM(var,scen,GCM):
         fname='REGEN/REGEN_LongTermStns_V1_1981-2010.nc'
         ds_ref = xr.open_dataset(fname)
         cor_method='*'
+        
     elif var == 'tmax':
         fname='CRUJRA/crujra.v2.0.5d.tasmax.1981-2010.nc'
         ds_ref = xr.open_dataset(fname)
@@ -46,15 +47,14 @@ def BC_QM(var,scen,GCM):
 
     ### Train correction
     QM = sdba.EmpiricalQuantileMapping.train(ref, hist, nquantiles=n_quant,
-                                             group='time.season',
+                                             group='time',
                                              kind=cor_method)
 
 
     ### Apply correction
     scen = QM.adjust(sim, extrapolation='constant', interp='nearest')
-    print('bla')
-    ds_scen = scen.transpose('time','lat','lon').to_dataset()
-    print('miau')
-    ds_scen.to_netcdf('test.nc')
+    ds_scen = scen.transpose('time','lat','lon').to_dataset(name=var)
+    ds_scen.to_netcdf(var+'_'+scen+'/'+GCM+'_QM/'+var+'_Amon_'+GCM+'_'+GCM+
+                      '_r1i1p1f1_gn_'+suffix)
 
 BC_QM(args.var,args.scen,args.GCM,args.period)
