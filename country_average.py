@@ -2,8 +2,13 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 
+### Test on three GCMs
 GCMs=['ACCESS-CM2', 'INM-CM4-8', 'CanESM5']
+
+### Open file with country masks
 ds_countries = xr.open_dataset('../country_shape/countries_mask_onedgree.nc')
+
+### Get gridarea
 ds_gridarea = xr.open_dataset('../country_shape/gridarea.nc')
 
 ### Calculate area weighted average for region
