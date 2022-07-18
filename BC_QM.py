@@ -8,6 +8,8 @@ def BC_QM(var,scen,GCM):
         ds_ref = xr.open_dataset(fname)
         cor_method='*'
     elif var == 'tmax':
+        fname='CRUJRA/crujra.v2.0.5d.tasmax.1981-2010.nc'
+        ds_ref = xr.open_dataset(fname)
         cor_method='+'
 
     ds_sim = xr.open_dataset(var+'_'+scen+'/'+GCM+'/'+var+'_Amon_'+GCM+'_'+scen+
