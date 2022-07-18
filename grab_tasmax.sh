@@ -67,13 +67,19 @@ cdo -L -b F64 -remapycon,grid.txt -sellonlatbox,-180,180,-90,90 -chunit,Kelvin,K
 
 inst='THU'
 model='CIESM'
+if [ ${scenario} = ssp585 ]; then
+    version='v20200605'
+elif [ ${scenario} = ssp585 ]; then
+  version=*
+fi
+
 version='v20200417'
 echo ${model}
 
 cdo -L -b F64 -remapycon,grid.txt -sellonlatbox,-180,180,-90,90 -chunit,Kelvin,K \
        -setcalendar,proleptic_gregorian -mergetime \
-       ${pathwayCMIP}/CMIP/${inst}/${model}/${pathwayHistorical}/gr/${version}/* \
-       ${pathwayCMIP}/ScenarioMIP/${inst}/${model}/${pathwayScenario}/gr/*/*_20* \
+       ${pathwayCMIP}/CMIP/${inst}/${model}/${pathwayHistorical}/gr/v20200417/* \
+       ${pathwayCMIP}/ScenarioMIP/${inst}/${model}/${pathwayScenario}/gr/${version}/*_20* \
        ${var}_${scenario}/${model}/${var}_Amon_${model}_${suffixScenario}
 
 inst='CMCC'
