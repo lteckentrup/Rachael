@@ -5,24 +5,21 @@ from itertools import groupby
 import argparse
 
 ### Read in CMIP6 output
-def read_in(GCM,scen,constraint):
-    if constraint == False:
-        ds = xr.open_dataset('pr_'+scen+'/'+GCM+'/pr_Amon_'+GCM+'_'+scen+
-                             '_r1i1p1f1_gn_18500101-21001231.nc')
-    elif constraint == True:
-        pass
+def read_in(GCM,scen):
+    ds = xr.open_dataset('pr_'+scen+'/'+GCM+'/pr_Amon_'+GCM+'_'+scen+
+                         '_r1i1p1f1_gn_18500101-21001231.nc')
 
     return(ds.sel(time=slice('1949','2100')))
 
 ### Calculate in which months there is meteorological drought
-def drought(GCM,scen,constraint):
-    ds = read_in(GCM,scen,constraint)
+def drought(GCM,scen):
+    ds = read_in(GCM,scen)
 
     ### test for single pixel
     # ds = ds.sel(lat=41,lon=118)
 
     ### 3 month rolling average
-    da_rolling = ds.pr.rolling(time=3, center=True).mean(dim='time')
+    da_rolling = ds.pr.rolling(time=3, center=True).mean()
 
     ### 15th percentile per month = threshold
     da_pctl = da_rolling.sel(time=slice('1950','2014')).groupby('time.month').quantile(q=0.15, dim='time')
@@ -38,8 +35,8 @@ def drought(GCM,scen,constraint):
 
     return(da_drought_months)
 
-def drought_duration(GCM,scen,constraint):
-    da = drought(GCM,scen,constraint)
+def drought_duration(GCM,scen):
+    da = drought(GCM,scen)
 
     ### Reference period
     da_hist = da.sel(time=slice('1950','2014'))
@@ -78,8 +75,15 @@ def drought_duration(GCM,scen,constraint):
             duration_fut = duration_fut[~np.isnan(duration_fut)]
 
             ### Average drought duration
-            matrix_duration_hist[x,y] = np.mean(duration_hist)
-            matrix_duration_fut[x,y] = np.mean(duration_fut)
+            if len(duration_hist) == 0:
+                matrix_duration_hist[x,y] = 0
+            else:
+                matrix_duration_hist[x,y] = np.mean(duration_hist)
+
+            if len(duration_fut) == 0:
+                matrix_duration_hist[x,y] = 0
+            else:
+                matrix_duration_fut[x,y] = np.mean(duration_fut)
 
     ### Convert numpy array to data array
     da_duration_hist_mean = xr.DataArray(matrix_duration_hist,dims=('lat','lon'),
@@ -109,10 +113,10 @@ def drought_duration(GCM,scen,constraint):
                                               'duration':{'dtype': 'float32'}})
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--GCM', type=str, required=True)
+parser.add_argument('--gcm', type=str, required=True)
 parser.add_argument('--scenario', type=str, required=True)
-parser.add_argument('--constrain', type=bool, required=True)
 
 args = parser.parse_args()
+print(args.gcm)
 
-drought_duration(args.GCM,args.scenario,args.constrain)
+drought_duration(args.gcm,args.scenario)
