@@ -11,7 +11,7 @@ def read_in(GCM,scen,constraint):
     elif constraint == True:
         pass
 
-    return(ds)
+    return(ds.sel(time=slice('1949','2100')))
 
 ### Calculate in which months there is meteorological drought
 def drought(GCM,scen,constraint):
@@ -21,7 +21,7 @@ def drought(GCM,scen,constraint):
     # ds = ds.sel(lat=41,lon=118)
 
     ### 3 month rolling average
-    da_rolling = ds.pr.rolling(time=3, center=True).mean()
+    da_rolling = ds.pr.rolling(time=3, center=True).mean(dim='time')
 
     ### 15th percentile per month = threshold
     da_pctl = da_rolling.sel(time=slice('1950','2014')).groupby('time.month').quantile(q=0.15, dim='time')
@@ -55,30 +55,37 @@ def drought_duration(GCM,scen,constraint):
     lon = da_hist.lon.values
 
     ### Create empty matrix
-    matrix_hist = np.zeros((len(lat), len(lon)))
-    matrix_fut = np.zeros((len(lat), len(lon)))
+    matrix_duration_hist = np.zeros((len(lat), len(lon)))
+    matrix_duration_fut = np.zeros((len(lat), len(lon)))
+
+    # matrix_frequency_hist = np.zeros((len(lat), len(lon)))
+    # matrix_frequency_fut = np.zeros((len(lat), len(lon)))
 
     ### Loop through historical and future periods and calculate duration + frequency
     for x in range(len(lat)):
         for y in range(len(lon)):
             ### Drought duration: sum consecutive drought months
-            da_duration_hist = np.array([sum(vs) for _, vs in groupby(np_hist[:,x,y])])
-            da_duration_fut = np.array([sum(vs) for _, vs in groupby(np_fut[:,x,y])])
+            duration_hist = np.array([sum(vs) for _, vs in groupby(np_hist[:,x,y])])
+            duration_fut = np.array([sum(vs) for _, vs in groupby(np_fut[:,x,y])])
 
             ### Set zero to nan
-            da_duration_hist[da_duration_hist == 0] = np.nan
-            da_duration_fut[da_duration_fut == 0] = np.nan
+            duration_hist[duration_hist == 0] = np.nan
+            duration_fut[duration_fut == 0] = np.nan
+
+            ### Drop nan
+            duration_hist = duration_hist[~np.isnan(duration_hist)]
+            duration_fut = duration_fut[~np.isnan(duration_fut)]
 
             ### Average drought duration
-            matrix_hist[x,y] = np.nanmean(da_duration_hist)
-            matrix_fut[x,y] = np.nanmean(da_duration_fut)
+            matrix_duration_hist[x,y] = np.mean(duration_hist)
+            matrix_duration_fut[x,y] = np.mean(duration_fut)
 
     ### Convert numpy array to data array
-    da_duration_hist_mean = xr.DataArray(matrix_hist,dims=('lat','lon'),
+    da_duration_hist_mean = xr.DataArray(matrix_duration_hist,dims=('lat','lon'),
                                          coords={'lat':lat,'lon':lon},
                                          attrs={'units':'# months'})
 
-    da_duration_fut_mean = xr.DataArray(matrix_fut,dims=('lat','lon'),
+    da_duration_fut_mean = xr.DataArray(matrix_duration_fut,dims=('lat','lon'),
                                          coords={'lat':lat,'lon':lon},
                                          attrs={'units':'# months'})
 
@@ -99,4 +106,5 @@ def drought_duration(GCM,scen,constraint):
                                     encoding={'lat':{'dtype': 'double'},
                                               'lon':{'dtype': 'double'},
                                               'duration':{'dtype': 'float32'}})
-        
+
+drought_duration('ACCESS-CM2','ssp245',False)
