@@ -2,6 +2,7 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 from itertools import groupby
+import argparse
 
 ### Read in CMIP6 output
 def read_in(GCM,scen,constraint):
@@ -107,4 +108,11 @@ def drought_duration(GCM,scen,constraint):
                                               'lon':{'dtype': 'double'},
                                               'duration':{'dtype': 'float32'}})
 
-drought_duration('ACCESS-CM2','ssp245',False)
+parser = argparse.ArgumentParser()
+parser.add_argument('--GCM', type=str, required=True)
+parser.add_argument('--scenario', type=str, required=True)
+parser.add_argument('--constrain', type=bool, required=True)
+
+args = parser.parse_args()
+
+drought_duration(args.GCM,args.scenario,args.constrain)
