@@ -15,102 +15,177 @@ def read_in(GCM,scen):
 def drought(GCM,scen):
     ds = read_in(GCM,scen)
 
-    ### test for single pixel
-    # ds = ds.sel(lat=41,lon=118)
-
     ### 3 month rolling average
     da_rolling = ds.pr.rolling(time=3, center=True).mean()
 
     ### 15th percentile per month = threshold
     da_pctl = da_rolling.sel(time=slice('1950','2014')).groupby('time.month').quantile(q=0.15, dim='time')
 
-    ### Months where average is above or below threshold
     da_diff = da_rolling.groupby('time.month') - da_pctl
 
+    return(da_diff)
+
+def drought_metrics(GCM,scen):
+    da_diff = drought(GCM,scen)
+    da_diff_inv = da_diff * (-1)
     ### Set drought months to 1
     da_drought_months =  da_diff.where((da_diff > 0) & (da_diff != np.nan), 1)
 
     ### Set non drought months to 0
     da_drought_months =  da_drought_months.where((da_diff <= 0), 0)
 
-    return(da_drought_months)
-
-def drought_duration(GCM,scen):
-    da = drought(GCM,scen)
-
     ### Reference period
-    da_hist = da.sel(time=slice('1950','2014'))
+    da_drought_months_hist = da_drought_months.sel(time=slice('1950','2014'))
+    da_diff_inv_hist = da_diff_inv.sel(time=slice('1950','2014'))
 
     ### Future period
-    da_fut = da.sel(time=slice('2051','2100'))
+    da_drought_months_fut = da_drought_months.sel(time=slice('2051','2100'))
+    da_diff_inv_fut = da_diff_inv.sel(time=slice('2051','2100'))
 
     ### Convert data array to numpy array
-    np_hist = da_hist.values
-    np_fut = da_fut.values
+    np_drought_months_hist = da_drought_months_hist.values
+    np_drought_months_fut = da_drought_months_fut.values
+
+    np_diff_inv_hist = da_diff_inv_hist.values
+    np_diff_inv_fut = da_diff_inv_fut.values
+
+    ### Set zero to small number so script won't fail
+    np_diff_inv_hist[np_diff_inv_hist == 0] = 1e-12
+    np_diff_inv_fut[np_diff_inv_fut == 0] = 1e-12
 
     ### Grab lat and lon
-    lat = da_hist.lat.values
-    lon = da_hist.lon.values
+    lat = da_drought_months_hist.lat.values
+    lon = da_drought_months_hist.lon.values
+
+    ### Number of years in datasets
+    nyears_hist = len(da_drought_months_hist.time.values)/12
+    nyears_fut = len(da_drought_months_fut.time.values)/12
 
     ### Create empty matrix
     matrix_duration_hist = np.zeros((len(lat), len(lon)))
     matrix_duration_fut = np.zeros((len(lat), len(lon)))
 
-    # matrix_frequency_hist = np.zeros((len(lat), len(lon)))
-    # matrix_frequency_fut = np.zeros((len(lat), len(lon)))
+    matrix_frequency_hist = np.zeros((len(lat), len(lon)))
+    matrix_frequency_fut = np.zeros((len(lat), len(lon)))
 
-    ### Loop through historical and future periods and calculate duration + frequency
+    matrix_intensity_hist = np.zeros((len(lat), len(lon)))
+    matrix_intensity_fut = np.zeros((len(lat), len(lon)))
+
+    ### Loop through historical and future periods and calculate duration, frequency, and intensity
     for x in range(len(lat)):
         for y in range(len(lon)):
             ### Drought duration: sum consecutive drought months
-            duration_hist = np.array([sum(vs) for _, vs in groupby(np_hist[:,x,y])])
-            duration_fut = np.array([sum(vs) for _, vs in groupby(np_fut[:,x,y])])
+            duration_hist = np.array([sum(vs) for _, vs in groupby(np_drought_months_hist[:,x,y])])
+            duration_fut = np.array([sum(vs) for _, vs in groupby(np_drought_months_fut[:,x,y])])
+
+            ### Drought intensity:
+            ### Multiply intensity with drought months to get rid off non drought months
+            drought_int_sel_hist = np.array(np_diff_inv_hist[:,x,y]) * \
+                                   np.array(np_drought_months_hist[:,x,y])
+            drought_int_sel_fut = np.array(np_diff_inv_fut[:,x,y]) * \
+                                  np.array(np_drought_months_fut[:,x,y])
+
+            ### Remove nan
+            np.nan_to_num(drought_int_sel_hist,copy=False)
+            np.nan_to_num(drought_int_sel_fut,copy=False)
+
+            ### Sum consecutive intensity during drought months
+            diff_inv_hist = np.array([i for k, g in groupby(drought_int_sel_hist, bool)
+                                      for i in ((sum(g),) if k else g)])
+            diff_inv_fut = np.array([i for k, g in groupby(drought_int_sel_fut, bool)
+                                     for i in ((sum(g),) if k else g)])
 
             ### Set zero to nan
             duration_hist[duration_hist == 0] = np.nan
             duration_fut[duration_fut == 0] = np.nan
 
+            diff_inv_hist[diff_inv_hist == 0] = np.nan
+            diff_inv_fut[diff_inv_fut == 0] = np.nan
+
             ### Drop nan
             duration_hist = duration_hist[~np.isnan(duration_hist)]
             duration_fut = duration_fut[~np.isnan(duration_fut)]
 
+            diff_inv_hist = diff_inv_hist[~np.isnan(diff_inv_hist)]
+            diff_inv_fut = diff_inv_fut[~np.isnan(diff_inv_fut)]
+
             ### Average drought duration
             if len(duration_hist) == 0:
                 matrix_duration_hist[x,y] = 0
+                matrix_frequency_hist[x,y] = 0
+                matrix_intensity_hist[x,y] = 0
             else:
                 matrix_duration_hist[x,y] = np.mean(duration_hist)
+                matrix_frequency_hist[x,y] = len(duration_hist)/nyears_hist
+                try:
+                    matrix_intensity_hist[x,y] = np.mean(diff_inv_hist/duration_hist)
+                except ValueError:
+                    print(diff_inv_hist)
+                    print(duration_hist)
 
             if len(duration_fut) == 0:
-                matrix_duration_hist[x,y] = 0
+                matrix_duration_fut[x,y] = 0
+                matrix_frequency_fut[x,y] = 0
+                matrix_intensity_fut[x,y] = 0
             else:
                 matrix_duration_fut[x,y] = np.mean(duration_fut)
+                matrix_frequency_fut[x,y] = len(duration_fut)/nyears_fut
+                try:
+                    matrix_intensity_fut[x,y] = np.mean(diff_inv_fut/duration_fut)
+                except ValueError:
+                    print(x)
+                    print(y)
+                    print(diff_inv_fut.shape)
+                    print(duration_fut.shape)
 
     ### Convert numpy array to data array
     da_duration_hist_mean = xr.DataArray(matrix_duration_hist,dims=('lat','lon'),
                                          coords={'lat':lat,'lon':lon},
                                          attrs={'units':'# months'})
-
     da_duration_fut_mean = xr.DataArray(matrix_duration_fut,dims=('lat','lon'),
+                                        coords={'lat':lat,'lon':lon},
+                                        attrs={'units':'# months'})
+
+    da_frequency_hist_mean = xr.DataArray(matrix_frequency_hist,dims=('lat','lon'),
+                                          coords={'lat':lat,'lon':lon},
+                                          attrs={'units':'yr-1'})
+    da_frequency_fut_mean = xr.DataArray(matrix_frequency_fut,dims=('lat','lon'),
                                          coords={'lat':lat,'lon':lon},
-                                         attrs={'units':'# months'})
+                                         attrs={'units':'yr-1'})
+
+    da_intensity_hist_mean = xr.DataArray(matrix_intensity_hist,dims=('lat','lon'),
+                                          coords={'lat':lat,'lon':lon},
+                                          attrs={'units':'mm month-1'})
+    da_intensity_fut_mean = xr.DataArray(matrix_intensity_fut,dims=('lat','lon'),
+                                         coords={'lat':lat,'lon':lon},
+                                         attrs={'units':'mm month-1'})
 
     ### Convert data array to dataset
-    ds_duration_hist_mean = da_duration_hist_mean.to_dataset(name='duration')
-    ds_duration_fut_mean = da_duration_fut_mean.to_dataset(name='duration')
+    ds_drought_hist_mean = da_duration_hist_mean.to_dataset(name='duration')
+    ds_drought_fut_mean = da_duration_fut_mean.to_dataset(name='duration')
+    ds_drought_hist_mean['frequency'] = da_frequency_hist_mean
+    ds_drought_fut_mean['frequency'] = da_frequency_fut_mean
+    ds_drought_hist_mean['intensity'] = da_intensity_hist_mean
+    ds_drought_fut_mean['intensity'] = da_intensity_fut_mean
 
     ### Write netCDF
-    ds_duration_hist_mean.to_netcdf('pr_DROUGHT_'+scen+'/'+GCM+
-                                    '/drought_duration_Amon_'+GCM+'_'+scen+
+    ds_drought_hist_mean.to_netcdf('pr_DROUGHT_'+scen+'/'+GCM+
+                                    '/drought_metrics_Amon_'+GCM+'_'+scen+
                                     '_r1i1p1f1_gn_1950-2014.nc',
                                     encoding={'lat':{'dtype': 'double'},
                                               'lon':{'dtype': 'double'},
-                                              'duration':{'dtype': 'float32'}})
-    ds_duration_fut_mean.to_netcdf('pr_DROUGHT_'+scen+'/'+GCM+
-                                    '/drought_duration_Amon_'+GCM+'_'+scen+
-                                    '_r1i1p1f1_gn_2051-2100.nc',
-                                    encoding={'lat':{'dtype': 'double'},
-                                              'lon':{'dtype': 'double'},
-                                              'duration':{'dtype': 'float32'}})
+                                              'duration':{'dtype': 'float32'},
+                                              'frequency':{'dtype': 'float32'},
+                                              'intensity':{'dtype': 'float32'}})
+
+    ds_drought_fut_mean.to_netcdf('pr_DROUGHT_'+scen+'/'+GCM+
+                                  '/drought_metrics_Amon_'+GCM+'_'+scen+
+                                  '_r1i1p1f1_gn_2051-2100.nc',
+                                  encoding={'lat':{'dtype': 'double'},
+                                            'lon':{'dtype': 'double'},
+                                            'duration':{'dtype': 'float32'},
+                                            'frequency':{'dtype': 'float32'},
+                                            'intensity':{'dtype': 'float32'}})
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gcm', type=str, required=True)
@@ -119,4 +194,4 @@ parser.add_argument('--scenario', type=str, required=True)
 args = parser.parse_args()
 print(args.gcm)
 
-drought_duration(args.gcm,args.scenario)
+drought_metrics(args.gcm,args.scenario)
