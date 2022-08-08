@@ -25,9 +25,15 @@ def drought(GCM,scen):
 
     return(da_diff)
 
+### Calculate drought metrics: duration, frequency, intensity
 def drought_metrics(GCM,scen):
+    ### Months where average is lower than percentile (define drought duration
+    ### and frequency)
     da_diff = drought(GCM,scen)
+    
+    ### Difference percentile - average (define drought intensity)
     da_diff_inv = da_diff * (-1)
+    
     ### Set drought months to 1
     da_drought_months =  da_diff.where((da_diff > 0) & (da_diff != np.nan), 1)
 
