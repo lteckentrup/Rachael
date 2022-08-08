@@ -20,7 +20,6 @@ def drought(GCM,scen):
 
     ### 15th percentile per month = threshold
     da_pctl = da_rolling.sel(time=slice('1950','2014')).groupby('time.month').quantile(q=0.15, dim='time')
-
     da_diff = da_rolling.groupby('time.month') - da_pctl
 
     return(da_diff)
