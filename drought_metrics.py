@@ -122,6 +122,7 @@ def drought_metrics(GCM,scen):
             else:
                 matrix_duration_hist[x,y] = np.mean(duration_hist)
                 matrix_frequency_hist[x,y] = len(duration_hist)/nyears_hist
+                ### Intensity looks funny?
                 # matrix_intensity_hist[x,y] = np.mean(diff_inv_hist/duration_hist)
                 matrix_intensity_hist[x,y] = np.mean(diff_inv_hist)
 
@@ -132,6 +133,7 @@ def drought_metrics(GCM,scen):
             else:
                 matrix_duration_fut[x,y] = np.mean(duration_fut)
                 matrix_frequency_fut[x,y] = len(duration_fut)/nyears_fut
+                ### Intensity looks funny?
                 # matrix_intensity_fut[x,y] = np.mean(diff_inv_fut/duration_fut)
                 matrix_intensity_fut[x,y] = np.mean(diff_inv_fut)
 
@@ -174,7 +176,7 @@ def drought_metrics(GCM,scen):
     ### Write netCDF
     ds_drought_hist_mean.to_netcdf('pr_DROUGHT_'+scen+'/'+GCM+
                                     '/drought_metrics_Amon_'+GCM+'_'+scen+
-                                    '_r1i1p1f1_gn_1950-2014_new.nc',
+                                    '_r1i1p1f1_gn_1950-2014.nc',
                                     encoding={'lat':{'dtype': 'double'},
                                               'lon':{'dtype': 'double'},
                                               'duration':{'dtype': 'float32'},
@@ -183,7 +185,7 @@ def drought_metrics(GCM,scen):
 
     ds_drought_fut_mean.to_netcdf('pr_DROUGHT_'+scen+'/'+GCM+
                                   '/drought_metrics_Amon_'+GCM+'_'+scen+
-                                  '_r1i1p1f1_gn_2051-2100_new.nc',
+                                  '_r1i1p1f1_gn_2051-2100.nc',
                                   encoding={'lat':{'dtype': 'double'},
                                             'lon':{'dtype': 'double'},
                                             'duration':{'dtype': 'float32'},
