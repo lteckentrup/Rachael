@@ -24,17 +24,17 @@ def drought(GCM,scen):
 
     return(da_diff)
 
-### Calculate drought metrics: duration, frequency, intensity
 def drought_metrics(GCM,scen):
     ### Months where average is lower than percentile (define drought duration
     ### and frequency)
     da_diff = drought(GCM,scen)
-    
+
     ### Difference percentile - average (define drought intensity)
     da_diff_inv = da_diff * (-1)
-    
+
     ### Set drought months to 1
-    da_drought_months =  da_diff.where((da_diff > 0) & (da_diff != np.nan), 1)
+    da_drought_months =  da_diff.fillna(0)
+    da_drought_months =  da_drought_months.where(da_drought_months >= 0, 1)
 
     ### Set non drought months to 0
     da_drought_months =  da_drought_months.where((da_diff <= 0), 0)
@@ -122,11 +122,8 @@ def drought_metrics(GCM,scen):
             else:
                 matrix_duration_hist[x,y] = np.mean(duration_hist)
                 matrix_frequency_hist[x,y] = len(duration_hist)/nyears_hist
-                try:
-                    matrix_intensity_hist[x,y] = np.mean(diff_inv_hist/duration_hist)
-                except ValueError:
-                    print(diff_inv_hist)
-                    print(duration_hist)
+                # matrix_intensity_hist[x,y] = np.mean(diff_inv_hist/duration_hist)
+                matrix_intensity_hist[x,y] = np.mean(diff_inv_hist)
 
             if len(duration_fut) == 0:
                 matrix_duration_fut[x,y] = 0
@@ -135,13 +132,8 @@ def drought_metrics(GCM,scen):
             else:
                 matrix_duration_fut[x,y] = np.mean(duration_fut)
                 matrix_frequency_fut[x,y] = len(duration_fut)/nyears_fut
-                try:
-                    matrix_intensity_fut[x,y] = np.mean(diff_inv_fut/duration_fut)
-                except ValueError:
-                    print(x)
-                    print(y)
-                    print(diff_inv_fut.shape)
-                    print(duration_fut.shape)
+                # matrix_intensity_fut[x,y] = np.mean(diff_inv_fut/duration_fut)
+                matrix_intensity_fut[x,y] = np.mean(diff_inv_fut)
 
     ### Convert numpy array to data array
     da_duration_hist_mean = xr.DataArray(matrix_duration_hist,dims=('lat','lon'),
@@ -173,10 +165,16 @@ def drought_metrics(GCM,scen):
     ds_drought_hist_mean['intensity'] = da_intensity_hist_mean
     ds_drought_fut_mean['intensity'] = da_intensity_fut_mean
 
+    ds_drought_hist_mean['lat'].attrs={'units':'degrees', 'long_name':'latitude'}
+    ds_drought_hist_mean['lon'].attrs={'units':'degrees', 'long_name':'longitude'}
+
+    ds_drought_fut_mean['lat'].attrs={'units':'degrees', 'long_name':'latitude'}
+    ds_drought_fut_mean['lon'].attrs={'units':'degrees', 'long_name':'longitude'}
+
     ### Write netCDF
     ds_drought_hist_mean.to_netcdf('pr_DROUGHT_'+scen+'/'+GCM+
                                     '/drought_metrics_Amon_'+GCM+'_'+scen+
-                                    '_r1i1p1f1_gn_1950-2014.nc',
+                                    '_r1i1p1f1_gn_1950-2014_new.nc',
                                     encoding={'lat':{'dtype': 'double'},
                                               'lon':{'dtype': 'double'},
                                               'duration':{'dtype': 'float32'},
@@ -185,7 +183,7 @@ def drought_metrics(GCM,scen):
 
     ds_drought_fut_mean.to_netcdf('pr_DROUGHT_'+scen+'/'+GCM+
                                   '/drought_metrics_Amon_'+GCM+'_'+scen+
-                                  '_r1i1p1f1_gn_2051-2100.nc',
+                                  '_r1i1p1f1_gn_2051-2100_new.nc',
                                   encoding={'lat':{'dtype': 'double'},
                                             'lon':{'dtype': 'double'},
                                             'duration':{'dtype': 'float32'},
